@@ -35,9 +35,8 @@ extern void Pulse_Off(void);
 //-----------------------------------------------------------------------------
 SI_INTERRUPT (TIMER2_ISR, TIMER2_IRQn)
   {
-    counter_PF++;
-    if (counter_PF > 1000) {
-        counter_PF = 0;
+    pulseCounter++;
+    if (pulseCounter < T_on) {
         Polarity(0); // start shunted
         Polarity(1); // forward polarity
         Pulse_On(); // pulse on
@@ -50,6 +49,10 @@ SI_INTERRUPT (TIMER2_ISR, TIMER2_IRQn)
         Pulse_Off(); // pulse off
         Polarity(0); // shunted
         // next interrupt is the next pulse
+    } else if (pulseCounter < T_on_double) {
+        Pulse_Off();
+    } else {
+        pulseCounter = 0;
     }
     TMR2CN0_TF2H = 0; // clear overflow flag
   }

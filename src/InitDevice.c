@@ -31,6 +31,7 @@ enter_DefaultMode_from_RESET (void)
   PORTS_1_enter_DefaultMode_from_RESET ();
   PBCFG_0_enter_DefaultMode_from_RESET ();
   CLOCK_0_enter_DefaultMode_from_RESET ();
+  TIMER16_2_enter_DefaultMode_from_RESET ();
   TIMER_SETUP_0_enter_DefaultMode_from_RESET ();
   IREF_0_enter_DefaultMode_from_RESET ();
   SMBUS_0_enter_DefaultMode_from_RESET ();
@@ -399,6 +400,50 @@ PBCFG_0_enter_DefaultMode_from_RESET (void)
 
   // $[XBR1 - Port I/O Crossbar 1]
   // [XBR1 - Port I/O Crossbar 1]$
+
+}
+
+extern void
+TIMER16_2_enter_DefaultMode_from_RESET (void)
+{
+  // $[Timer Initialization]
+  // Save Timer Configuration
+  uint8_t TMR2CN0_TR2_save;
+  TMR2CN0_TR2_save = TMR2CN0 & TMR2CN0_TR2__BMASK;
+  // Stop Timer
+  TMR2CN0 &= ~(TMR2CN0_TR2__BMASK);
+  // [Timer Initialization]$
+
+  // $[TMR2CN0 - Timer 2 Control]
+  // [TMR2CN0 - Timer 2 Control]$
+
+  // $[TMR2H - Timer 2 High Byte]
+  // [TMR2H - Timer 2 High Byte]$
+
+  // $[TMR2L - Timer 2 Low Byte]
+  // [TMR2L - Timer 2 Low Byte]$
+
+  // $[TMR2RLH - Timer 2 Reload High Byte]
+  /***********************************************************************
+   - Timer 2 Reload High Byte = 0x5D
+   ***********************************************************************/
+  TMR2RLH = (0x5D << TMR2RLH_TMR2RLH__SHIFT);
+  // [TMR2RLH - Timer 2 Reload High Byte]$
+
+  // $[TMR2RLL - Timer 2 Reload Low Byte]
+  /***********************************************************************
+   - Timer 2 Reload Low Byte = 0x3D
+   ***********************************************************************/
+  TMR2RLL = (0x3D << TMR2RLL_TMR2RLL__SHIFT);
+  // [TMR2RLL - Timer 2 Reload Low Byte]$
+
+  // $[TMR2CN0]
+  // [TMR2CN0]$
+
+  // $[Timer Restoration]
+  // Restore Timer Configuration
+  TMR2CN0 |= TMR2CN0_TR2_save;
+  // [Timer Restoration]$
 
 }
 
