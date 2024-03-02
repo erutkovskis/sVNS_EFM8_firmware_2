@@ -61,6 +61,6 @@ extern volatile bool SMB_RW;                            // Software flag to indi
 extern uint16_t NUM_ERRORS;                        // Counter for the number of errors.
 extern uint8_t i;
 
-SI_SBIT (LED0, SFR_P1, 0);          // LED0==LED_ON means ON
+//SI_SBIT (LED0, SFR_P1, 0);          // LED0==LED_ON means ON
 
 #endif /* EFM8SB1_SMBUS_MASTER_MULTIBYTE_MAIN_H_ */

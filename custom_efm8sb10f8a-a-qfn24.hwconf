@@ -10,6 +10,7 @@
     <property object="INTERRUPT_0" propertyId="interrupt.extendedinterruptenable1.enablesmbussmb0interrupt" value="Enabled"/>
     <property object="INTERRUPT_0" propertyId="interrupt.interruptenable.enableallinterrupts" value="Enabled"/>
     <property object="INTERRUPT_0" propertyId="interrupt.interruptenable.enabletimer2interrupt" value="Enabled"/>
+    <property object="INTERRUPT_0" propertyId="interrupt.interruptpriority.timer2prioritycontrolinterrupt" value="High priority"/>
     <property object="IREF_0" propertyId="ABPeripheral.included" value="true"/>
     <property object="IREF_0" propertyId="iref.currentreferencecontrol.outputcurrent" value="0 uA"/>
     <property object="IREF_0" propertyId="iref.currentreferencecontrol.outputpower" value="High current mode (8 uA step size)"/>
@@ -68,6 +69,7 @@
     <property object="SMBUS_0" propertyId="ABPeripheral.included" value="true"/>
     <property object="SMBUS_0" propertyId="smbus.configuration.enablesmbus" value="Enabled"/>
     <property object="SMBUS_0" propertyId="smbus.configuration.smbusclocksourceselection" value="Timer 1 overflow"/>
+    <property object="SMBUS_0" propertyId="smbus.configuration.smbusslaveinhibit" value="Slave Disabled"/>
     <property object="SMBUS_0" propertyId="smbus.view.view" value="Advanced"/>
     <property object="TIMER01_0" propertyId="ABPeripheral.included" value="true"/>
     <property object="TIMER16_2" propertyId="ABPeripheral.included" value="true"/>
@@ -77,6 +79,10 @@
     <property object="TIMER16_2" propertyId="timer16.reloadlowbyte.reloadlowbyte" value="61"/>
     <property object="TIMER16_3" propertyId="ABPeripheral.included" value="true"/>
     <property object="TIMER_SETUP_0" propertyId="ABPeripheral.included" value="true"/>
+    <property object="TIMER_SETUP_0" propertyId="timer_setup.clockcontrol.timer0clockselect" value="Use SYSCLK"/>
+    <property object="TIMER_SETUP_0" propertyId="timer_setup.clockcontrol0.timer01prescale" value="SYSCLK / 4"/>
+    <property object="TIMER_SETUP_0" propertyId="timer_setup.timer0.clocksource" value="Use SYSCLK"/>
+    <property object="TIMER_SETUP_0" propertyId="timer_setup.timer0.mode" value="Mode 1, 16-bit Counter/Timer"/>
     <property object="TIMER_SETUP_0" propertyId="timer_setup.timer01control.timer1runcontrol" value="Start"/>
     <property object="TIMER_SETUP_0" propertyId="timer_setup.timer1.clocksource" value="Use SYSCLK"/>
     <property object="TIMER_SETUP_0" propertyId="timer_setup.timer1.mode" value="Mode 2, 8-bit Counter/Timer with Auto-Reload"/>

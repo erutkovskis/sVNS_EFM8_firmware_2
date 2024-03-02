@@ -16,6 +16,36 @@
 // [Generated Includes]$
 
 //-----------------------------------------------------------------------------
+// Function prototypes
+//-----------------------------------------------------------------------------
+void
+SDA_Reset (void);
+void
+Polarity (uint8_t);
+void
+Pulse_On (void);
+void
+Pulse_Off (void);
+void
+T0_Waitus (uint16_t);
+void
+SMB_Write (void);
+void
+SMB_Read (void);
+void
+MUX36S16_output (uint8_t);
+void
+MUX36D08_output (uint8_t);
+void
+Write_Channel (uint8_t);
+void
+mode_single_channel (void);
+void
+mode_multichannel_scanning_nonloop (void);
+void
+mode_multichannel_scanning_loop (void);
+
+//-----------------------------------------------------------------------------
 // Application-component specific constants and variables
 //-----------------------------------------------------------------------------
 
@@ -36,6 +66,8 @@ uint32_t T_on;           // Stimulation time on and off, seconds
 uint32_t T_on_double;    // doubled T_on necessary for the period of silence
 uint8_t T_on_HB;
 uint8_t T_on_LB;
+uint8_t T_on_MB_LSB2;         // Middle bytes for encoding large 32-bit number
+uint8_t T_on_MB_LSB1;
 bool channel_set = 0;
 bool telemetry_enabled = 0;
 bool On;
@@ -97,9 +129,16 @@ SiLabs_Startup (void)
 void
 main (void)
 {
+  T0_Waitus (1);                     // Wait 50 us for stability
+  while (!SDA)
+    {
+      SDA_Reset ();
+    }
   // Call hardware initialization routine
   enter_DefaultMode_from_RESET ();
+  //
   // Read data-stimulation parameters from NT3H via I2C
+  P05 = 1;
   TARGET = SLAVE_ADDR;         // NT3H slave address, 0xAA for NT3H
   SMB_Read ();      // Read first 16 bytes from the memory 0x01 into READ buffer
   for (j = 0; j < 16; j++)
@@ -113,44 +152,53 @@ main (void)
   PW_LB = SAVE[1]; // Pulse Width in chunks of 50 us low byte
   T_HB = SAVE[2]; // Period high byte
   T_LB = SAVE[3]; // Period frequency low byte
-  T_on_HB = SAVE[4]; // Pulse train period and channel switching time, seconds
-  T_on_LB = SAVE[5];
-  On = SAVE[7];
-  Iset = SAVE[8]; // IREF current value, remember 0x3F is maximum, 0.5 mA reference current
-  mode = SAVE[9]; // Stimulation mode. 1 for singlechannel stimulation, 2 for multichannel scan (once), 3 for for multichannel scan (loop)
-  channel_nr = SAVE[10];
-  telemetry_enabled = SAVE[11];
+  T_on_HB = SAVE[4]; // Pulse train period and channel switching time, separated into 8bit chunks
+  T_on_MB_LSB2 = SAVE[5];
+  T_on_MB_LSB1 = SAVE[6];
+  T_on_LB = SAVE[7];
+  On = SAVE[8];
+  Iset = SAVE[9]; // IREF current value, remember 0x3F is maximum, 0.5 mA reference current
+  mode = SAVE[10]; // Stimulation mode. 1 for singlechannel stimulation, 2 for multichannel scan (once), 3 for for multichannel scan (loop)
+  channel_nr = SAVE[11];
+  telemetry_enabled = SAVE[12];
 
   // Set the device according to read values
   P05 = On;         // Enable or disable LT8410, enable MUX36D08 and 2x MUX36S16
   PW = (PW_HB << 8) | (PW_LB); // Combine PW into single hex
   T = (T_HB << 8) | (T_LB); // Combine pulse period into single hex
-  T_on = (T_on_HB << 8) | (T_on_LB);
-  T_on_double = 2*T_on;
-  switch (mode) {
+  T_on = (T_on_HB << 32) | (T_on_MB_LSB2 << 16) | (T_on_MB_LSB1 << 8)
+      | (T_on_LB);
+  T_on_double = 2 * T_on;
+  switch (mode)
+    {
     case 1:
-      MUX36S16_output(channel_nr); // initial setup of the channel
-      if (telemetry_enabled) {
-          Write_Channel(channel_nr); // write the channel
-      }
-      mode_single_channel();
+
+      mode_single_channel ();
       break;
     case 2:
-      mode_multichannel_scanning_nonloop();
+      mode_multichannel_scanning_nonloop ();
       break;
     case 3:
-      mode_multichannel_scanning_loop();
-  }
+      mode_multichannel_scanning_loop ();
+      break;
+    }
 }
 
 //----------------------------------
 // Stimulation modes
 //----------------------------------
-void mode_single_channel(void) {
+void
+mode_single_channel (void)
+{
   P05 = On;
+  MUX36S16_output (channel_nr); // initial setup of the channel
+  if (telemetry_enabled)
+    {
+      Write_Channel (channel_nr); // write the set channel number to NT3H
+    }
   TMR2CN0 |= TMR2CN0_TR2__RUN; // start timer 2 to generate the pulse frequency
   while (1)
-  {
+    {
 //    if (secondsPassed == 0 && isStim && !channel_set) {
 //        P05 = On;
 //        channel_set = 1;
@@ -163,9 +211,26 @@ void mode_single_channel(void) {
 //        idle = 0;
 //        P05 = 0; // switch off 20V stuff to reduce the energy
 //    }
-  }
+    }
 }
 
+void
+mode_multichannel_scanning_nonloop (void)
+{
+  while (1)
+    {
+
+    }
+}
+
+void
+mode_multichannel_scanning_loop (void)
+{
+  while (1)
+    {
+
+    }
+}
 
 // Function definitions
 
@@ -379,3 +444,21 @@ Write_Channel (uint8_t channel_to_write)
 // $[Generated Run-time code]
 // [Generated Run-time code]$
 
+void
+SDA_Reset (void)
+{
+  uint8_t j;                    // Dummy variable counters
+  // Provide clock pulses to allow the slave to advance out
+  // of its current state. This will allow it to release SDA.
+  XBR1 = 0x40;                     // Enable Crossbar
+  SCL = 0;                         // Drive the clock low
+  for (j = 0; j < 255; j++)
+    ;        // Hold the clock low
+  SCL = 1;                         // Release the clock
+  while (!SCL)
+    ;                     // Wait for open-drain
+  // clock output to rise
+  for (j = 0; j < 10; j++)
+    ;         // Hold the clock high
+  XBR1 = 0x00;                     // Disable Crossbar
+}

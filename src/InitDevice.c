@@ -162,10 +162,12 @@ SMBUS_0_enter_DefaultMode_from_RESET (void)
   // $[SMB0CF - SMBus 0 Configuration]
   /***********************************************************************
    - Timer 1 Overflow
+   - Slave states are inhibited
    - Enable the SMBus module
    ***********************************************************************/
   SMB0CF &= ~SMB0CF_SMBCS__FMASK;
-  SMB0CF |= SMB0CF_SMBCS__TIMER1 | SMB0CF_ENSMB__ENABLED;
+  SMB0CF |= SMB0CF_SMBCS__TIMER1 | SMB0CF_INH__SLAVE_DISABLED
+      | SMB0CF_ENSMB__ENABLED;
   // [SMB0CF - SMBus 0 Configuration]$
 
 }
@@ -208,6 +210,17 @@ INTERRUPT_0_enter_DefaultMode_from_RESET (void)
   // [IE - Interrupt Enable]$
 
   // $[IP - Interrupt Priority]
+  /***********************************************************************
+   - External Interrupt 0 set to low priority level
+   - External Interrupt 1 set to low priority level
+   - SPI0 interrupt set to low priority level
+   - Timer 0 interrupt set to low priority level
+   - Timer 1 interrupt set to low priority level
+   - Timer 2 interrupt set to high priority level
+   - UART0 interrupt set to low priority level
+   ***********************************************************************/
+  IP = IP_PX0__LOW | IP_PX1__LOW | IP_PSPI0__LOW | IP_PT0__LOW | IP_PT1__LOW
+      | IP_PT2__HIGH | IP_PS0__LOW;
   // [IP - Interrupt Priority]$
 
   // $[EIE2 - Extended Interrupt Enable 2]
@@ -223,15 +236,15 @@ TIMER_SETUP_0_enter_DefaultMode_from_RESET (void)
 {
   // $[CKCON0 - Clock Control 0]
   /***********************************************************************
-   - System clock divided by 12
-   - Counter/Timer 0 uses the clock defined by the prescale field, SCA
+   - System clock divided by 4
+   - Counter/Timer 0 uses the system clock
    - Timer 2 high byte uses the clock defined by T2XCLK in TMR2CN0
    - Timer 2 low byte uses the clock defined by T2XCLK in TMR2CN0
    - Timer 3 high byte uses the clock defined by T3XCLK in TMR3CN0
    - Timer 3 low byte uses the clock defined by T3XCLK in TMR3CN0
    - Timer 1 uses the system clock
    ***********************************************************************/
-  CKCON0 = CKCON0_SCA__SYSCLK_DIV_12 | CKCON0_T0M__PRESCALE
+  CKCON0 = CKCON0_SCA__SYSCLK_DIV_4 | CKCON0_T0M__SYSCLK
       | CKCON0_T2MH__EXTERNAL_CLOCK | CKCON0_T2ML__EXTERNAL_CLOCK
       | CKCON0_T3MH__EXTERNAL_CLOCK | CKCON0_T3ML__EXTERNAL_CLOCK
       | CKCON0_T1M__SYSCLK;
@@ -239,14 +252,14 @@ TIMER_SETUP_0_enter_DefaultMode_from_RESET (void)
 
   // $[TMOD - Timer 0/1 Mode]
   /***********************************************************************
-   - Mode 0, 13-bit Counter/Timer
+   - Mode 1, 16-bit Counter/Timer
    - Mode 2, 8-bit Counter/Timer with Auto-Reload
    - Timer Mode
    - Timer 0 enabled when TR0 = 1 irrespective of INT0 logic level
    - Timer Mode
    - Timer 1 enabled when TR1 = 1 irrespective of INT1 logic level
    ***********************************************************************/
-  TMOD = TMOD_T0M__MODE0 | TMOD_T1M__MODE2 | TMOD_CT0__TIMER
+  TMOD = TMOD_T0M__MODE1 | TMOD_T1M__MODE2 | TMOD_CT0__TIMER
       | TMOD_GATE0__DISABLED | TMOD_CT1__TIMER | TMOD_GATE1__DISABLED;
   // [TMOD - Timer 0/1 Mode]$
 
