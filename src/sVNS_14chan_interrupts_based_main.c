@@ -130,12 +130,14 @@ void
 main (void)
 {
   T0_Waitus (1);                     // Wait 50 us for stability
-  while (!SDA)
-    {
-      SDA_Reset ();
-    }
   // Call hardware initialization routine
-  enter_DefaultMode_from_RESET ();
+  enter_SMBus_reset_from_RESET (); // initialize routine for the SMBus reset
+  while (!SDA)
+      {
+        SDA_Reset ();
+      }
+  enter_DefaultMode_from_SMBus_reset (); // initialize normal operation
+
   //
   // Read data-stimulation parameters from NT3H via I2C
   P05 = 1;

@@ -13,32 +13,38 @@
 
 // $[Mode Transition Prototypes]
 extern void
-enter_DefaultMode_from_RESET (void);
+enter_SMBus_reset_from_RESET (void);
+extern void
+enter_DefaultMode_from_SMBus_reset (void);
 // [Mode Transition Prototypes]$
 
 // $[Config(Per-Module Mode)Transition Prototypes]
 extern void
-PCA_0_enter_DefaultMode_from_RESET (void);
+PCA_0_enter_SMBus_reset_from_RESET (void);
 extern void
-PCACH_2_enter_DefaultMode_from_RESET (void);
+PCACH_2_enter_SMBus_reset_from_RESET (void);
 extern void
-PORTS_0_enter_DefaultMode_from_RESET (void);
+PBCFG_0_enter_SMBus_reset_from_RESET (void);
 extern void
-PORTS_1_enter_DefaultMode_from_RESET (void);
+PCA_0_enter_DefaultMode_from_SMBus_reset (void);
 extern void
-PBCFG_0_enter_DefaultMode_from_RESET (void);
+PORTS_0_enter_DefaultMode_from_SMBus_reset (void);
 extern void
-CLOCK_0_enter_DefaultMode_from_RESET (void);
+PORTS_1_enter_DefaultMode_from_SMBus_reset (void);
 extern void
-TIMER16_2_enter_DefaultMode_from_RESET (void);
+PBCFG_0_enter_DefaultMode_from_SMBus_reset (void);
 extern void
-TIMER_SETUP_0_enter_DefaultMode_from_RESET (void);
+CLOCK_0_enter_DefaultMode_from_SMBus_reset (void);
 extern void
-IREF_0_enter_DefaultMode_from_RESET (void);
+TIMER16_2_enter_DefaultMode_from_SMBus_reset (void);
 extern void
-SMBUS_0_enter_DefaultMode_from_RESET (void);
+TIMER_SETUP_0_enter_DefaultMode_from_SMBus_reset (void);
 extern void
-INTERRUPT_0_enter_DefaultMode_from_RESET (void);
+IREF_0_enter_DefaultMode_from_SMBus_reset (void);
+extern void
+SMBUS_0_enter_DefaultMode_from_SMBus_reset (void);
+extern void
+INTERRUPT_0_enter_DefaultMode_from_SMBus_reset (void);
 // [Config(Per-Module Mode)Transition Prototypes]$
 
 #endif
