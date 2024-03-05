@@ -72,6 +72,17 @@ bool channel_set = 0;
 bool telemetry_enabled = 0;
 bool On;
 
+union { // solution proposed by Copilot AI - make a union from the 32-bit variable with four 8-bit variables
+  unsigned long position;
+  struct {
+    unsigned char byte1;
+    unsigned char byte2;
+    unsigned char byte3;
+    unsigned char byte4;
+  } bytes;
+} CurrentPosition;
+
+
 //-----------------------------------------------------------------------------
 // Definitions
 //-----------------------------------------------------------------------------
@@ -158,6 +169,14 @@ main (void)
   T_on_MB_LSB2 = SAVE[5];
   T_on_MB_LSB1 = SAVE[6];
   T_on_LB = SAVE[7];
+
+  CurrentPosition.bytes.byte1 = T_on_HB; // assigned 8-bit chunks to the struct
+  CurrentPosition.bytes.byte2 = T_on_MB_LSB2;
+  CurrentPosition.bytes.byte3 = T_on_MB_LSB1;
+  CurrentPosition.bytes.byte4 = T_on_LB;
+
+  T_on = CurrentPosition.position; // assemble chunks into 32-bit variable
+
   On = SAVE[8];
   Iset = SAVE[9]; // IREF current value, remember 0x3F is maximum, 0.5 mA reference current
   mode = SAVE[10]; // Stimulation mode. 1 for singlechannel stimulation, 2 for multichannel scan (once), 3 for for multichannel scan (loop)
@@ -168,9 +187,12 @@ main (void)
   P05 = On;         // Enable or disable LT8410, enable MUX36D08 and 2x MUX36S16
   PW = (PW_HB << 8) | (PW_LB); // Combine PW into single hex
   T = (T_HB << 8) | (T_LB); // Combine pulse period into single hex
-  T_on = (T_on_HB << 32) | (T_on_MB_LSB2 << 16) | (T_on_MB_LSB1 << 8)
-      | (T_on_LB);
+  //T_on = (T_on_HB << 24) | (T_on_MB_LSB2 << 16) | (T_on_MB_LSB1 << 8) | (T_on_LB);
+  //T_on = (T_on_MB_LSB1 << 16) & 0xFFFFFFFF;
   T_on_double = 2 * T_on;
+
+  T0_Waitus(1);
+
   switch (mode)
     {
     case 1:

@@ -225,8 +225,8 @@ SI_INTERRUPT (SMBUS0_ISR, SMBUS0_IRQn)
 // TCON::TF0 (Timer 0 Overflow Flag)
 //
 //-----------------------------------------------------------------------------
-SI_INTERRUPT (TIMER0_ISR, TIMER0_IRQn)
-  {
-
-  }
+//SI_INTERRUPT (TIMER0_ISR, TIMER0_IRQn)
+//  {
+//
+//  }
 
