@@ -61,26 +61,27 @@ uint16_t T;          // Pulse period timer setting 16-bit word
 uint8_t Iset; // Set IREF current reference value, 0-63 (decimal) / 0 - 3F (hex)
 uint8_t mode; // Stimulation mode. 1 for singlechannel stimulation, 2 for multichannel scan (once), 3 for for multichannel scan (loop)
 uint8_t channel_nr;  // Preset channel number for the single-channel stimulation
-volatile uint32_t pulseCounter = 0; // counts number of pulses made for T_on comparison
-uint32_t T_on;           // Stimulation time on and off, seconds
-uint32_t T_on_double;    // doubled T_on necessary for the period of silence
+volatile uint16_t pulseCounter = 0; // counts number of pulses made for T_on comparison
+extern uint8_t set_stim_off;
+uint16_t T_on;           // Stimulation time on and off, seconds
+uint16_t T_on_double;    // doubled T_on necessary for the period of silence
 uint8_t T_on_HB;
 uint8_t T_on_LB;
 uint8_t T_on_MB_LSB2;         // Middle bytes for encoding large 32-bit number
 uint8_t T_on_MB_LSB1;
-bool channel_set = 0;
+volatile bool channel_set = 0;
 bool telemetry_enabled = 0;
-bool On;
-
-union { // solution proposed by Copilot AI - make a union from the 32-bit variable with four 8-bit variables
-  unsigned long position;
-  struct {
-    unsigned char byte1;
-    unsigned char byte2;
-    unsigned char byte3;
-    unsigned char byte4;
-  } bytes;
-} CurrentPosition;
+volatile bool On;
+//
+//union { // solution proposed by Copilot AI - make a union from the 32-bit variable with four 8-bit variables
+//  unsigned long position;
+//  struct {
+//    unsigned char byte1;
+//    unsigned char byte2;
+//    unsigned char byte3;
+//    unsigned char byte4;
+//  } bytes;
+//} CurrentPosition;
 
 
 //-----------------------------------------------------------------------------
@@ -151,7 +152,6 @@ main (void)
 
   //
   // Read data-stimulation parameters from NT3H via I2C
-  P05 = 1;
   TARGET = SLAVE_ADDR;         // NT3H slave address, 0xAA for NT3H
   SMB_Read ();      // Read first 16 bytes from the memory 0x01 into READ buffer
   for (j = 0; j < 16; j++)
@@ -166,29 +166,27 @@ main (void)
   T_HB = SAVE[2]; // Period high byte
   T_LB = SAVE[3]; // Period frequency low byte
   T_on_HB = SAVE[4]; // Pulse train period and channel switching time, separated into 8bit chunks
-  T_on_MB_LSB2 = SAVE[5];
-  T_on_MB_LSB1 = SAVE[6];
-  T_on_LB = SAVE[7];
+  T_on_LB = SAVE[5];
+//  T_on_HB = 0x00;
+//  T_on_LB = 0x64;
 
-  CurrentPosition.bytes.byte1 = T_on_HB; // assigned 8-bit chunks to the struct
-  CurrentPosition.bytes.byte2 = T_on_MB_LSB2;
-  CurrentPosition.bytes.byte3 = T_on_MB_LSB1;
-  CurrentPosition.bytes.byte4 = T_on_LB;
+  On = SAVE[6];
 
-  T_on = CurrentPosition.position; // assemble chunks into 32-bit variable
+  Iset = SAVE[7]; // IREF current value, remember 0x3F is maximum, 0.5 mA reference current
+  mode = SAVE[8]; // Stimulation mode. 1 for singlechannel stimulation, 2 for multichannel scan (once), 3 for for multichannel scan (loop)
+  channel_nr = SAVE[9];
+  telemetry_enabled = SAVE[10];
 
-  On = SAVE[8];
-  Iset = SAVE[9]; // IREF current value, remember 0x3F is maximum, 0.5 mA reference current
-  mode = SAVE[10]; // Stimulation mode. 1 for singlechannel stimulation, 2 for multichannel scan (once), 3 for for multichannel scan (loop)
-  channel_nr = SAVE[11];
-  telemetry_enabled = SAVE[12];
-
+//  On = 1;
+//  Iset = 0x3F;
+//  mode = 1;
+//  channel_nr = 0;
+//  telemetry_enabled = 1;
   // Set the device according to read values
   P05 = On;         // Enable or disable LT8410, enable MUX36D08 and 2x MUX36S16
   PW = (PW_HB << 8) | (PW_LB); // Combine PW into single hex
   T = (T_HB << 8) | (T_LB); // Combine pulse period into single hex
-  //T_on = (T_on_HB << 24) | (T_on_MB_LSB2 << 16) | (T_on_MB_LSB1 << 8) | (T_on_LB);
-  //T_on = (T_on_MB_LSB1 << 16) & 0xFFFFFFFF;
+  T_on = (T_on_HB << 8) | (T_on_LB);
   T_on_double = 2 * T_on;
 
   T0_Waitus(1);
@@ -196,7 +194,6 @@ main (void)
   switch (mode)
     {
     case 1:
-
       mode_single_channel ();
       break;
     case 2:
@@ -205,6 +202,8 @@ main (void)
     case 3:
       mode_multichannel_scanning_loop ();
       break;
+    default :
+      while(1); // loop indefinitely if mode undefined
     }
 }
 
@@ -223,27 +222,32 @@ mode_single_channel (void)
   TMR2CN0 |= TMR2CN0_TR2__RUN; // start timer 2 to generate the pulse frequency
   while (1)
     {
-//    if (secondsPassed == 0 && isStim && !channel_set) {
-//        P05 = On;
-//        channel_set = 1;
-//    }
-//    if (isStim) {
-//        Stim_Sequence(PW, T);
-//    }
-//    if (isStim == 0 && idle == 1) {
-//        Stim_Off();
-//        idle = 0;
-//        P05 = 0; // switch off 20V stuff to reduce the energy
-//    }
+      // nothing is needed here
     }
 }
 
 void
 mode_multichannel_scanning_nonloop (void)
 {
+  P05 = On;
+  channel_nr = 0;
+  MUX36S16_output (channel_nr); // initial setup of the channel
+  channel_set = 1;
+  Write_Channel(channel_nr); // initial write of the channel
+  TMR2CN0 |= TMR2CN0_TR2__RUN; // start timer 2 to generate the pulse frequency
   while (1)
     {
-
+      if ((!set_stim_off) && (!channel_set)) { // T_on_double elapsed
+          channel_nr ++; // as soon as T_on elapsed increment the channel
+          if (channel_nr >= 15) { // if channel reached the last one
+              TMR2CN0 &= ~(TMR2CN0_TR2__BMASK); // stop timer 2
+              P05 = 0; // switch off periphery
+              while (1); // halt
+          }
+          MUX36S16_output (channel_nr); // set the new channel
+          channel_set = 1;
+          Write_Channel(channel_nr);
+      }
     }
 }
 

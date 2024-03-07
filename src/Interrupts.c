@@ -10,6 +10,8 @@
 #include <SI_EFM8SB1_Register_Enums.h>
 #include "EFM8SB1_SMBus_Master_Multibyte.h"
 
+SI_SBIT (P05, SFR_P0, 5);// Pin 0.5 for SHDN (20V stage) enable/disable
+
 // NT3H I2C parameters
 #define MEMA_read  0x01     // Memory address to read
 #define MEMA_write  0x02    // Memory address to write
@@ -18,9 +20,12 @@ bool SA_read_sent = 0;
 bool MEMA_sent = 0;
 bool Read_Init = 0;
 
-extern uint32_t pulseCounter;
-extern uint32_t T_on;
-extern uint32_t T_on_double;
+extern uint16_t pulseCounter;
+extern uint16_t T_on;
+extern uint16_t T_on_double;
+extern bool On;
+extern volatile uint8_t set_stim_off = 0;
+extern volatile bool channel_set;
 
 extern void
 T0_Waitus (uit16_t);
@@ -43,7 +48,7 @@ Pulse_Off (void);
 SI_INTERRUPT (TIMER2_ISR, TIMER2_IRQn)
   {
     pulseCounter++;
-    if (pulseCounter < T_on)
+    if (pulseCounter <= T_on)
       {
         Polarity(0); // start shunted
         Polarity(1);// forward polarity
@@ -58,13 +63,19 @@ SI_INTERRUPT (TIMER2_ISR, TIMER2_IRQn)
         Polarity(0);// shunted
         // next interrupt is the next pulse
       }
-    else if (pulseCounter < T_on_double)
+    else if ((pulseCounter <= T_on_double) && (!set_stim_off))
       {
         Pulse_Off();
+        Polarity(0);// shunted
+        set_stim_off = 1;
+        P05 = 0;
       }
-    else
+    else if (pulseCounter > T_on_double)
       {
         pulseCounter = 0;
+        set_stim_off = 0;
+        P05 = On;
+        channel_set = 0;
       }
     TMR2CN0_TF2H = 0; // clear overflow flag
   }
