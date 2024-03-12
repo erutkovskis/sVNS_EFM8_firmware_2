@@ -28,11 +28,15 @@ PBCFG_0_enter_SMBus_reset_from_RESET (void);
 extern void
 PCA_0_enter_DefaultMode_from_SMBus_reset (void);
 extern void
+VREG_0_enter_DefaultMode_from_SMBus_reset (void);
+extern void
 PORTS_0_enter_DefaultMode_from_SMBus_reset (void);
 extern void
 PORTS_1_enter_DefaultMode_from_SMBus_reset (void);
 extern void
 PBCFG_0_enter_DefaultMode_from_SMBus_reset (void);
+extern void
+HFOSC_0_enter_DefaultMode_from_SMBus_reset (void);
 extern void
 CLOCK_0_enter_DefaultMode_from_SMBus_reset (void);
 extern void

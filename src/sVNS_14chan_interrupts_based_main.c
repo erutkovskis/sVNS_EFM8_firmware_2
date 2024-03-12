@@ -83,7 +83,6 @@ volatile bool On;
 //  } bytes;
 //} CurrentPosition;
 
-
 //-----------------------------------------------------------------------------
 // Definitions
 //-----------------------------------------------------------------------------
@@ -141,13 +140,13 @@ SiLabs_Startup (void)
 void
 main (void)
 {
-  T0_Waitus (1);                     // Wait 50 us for stability
+  //T0_Waitus (1);                     // Wait 50 us for stability
   // Call hardware initialization routine
   enter_SMBus_reset_from_RESET (); // initialize routine for the SMBus reset
   while (!SDA)
-      {
-        SDA_Reset ();
-      }
+    {
+      SDA_Reset ();
+    }
   enter_DefaultMode_from_SMBus_reset (); // initialize normal operation
 
   //
@@ -189,7 +188,7 @@ main (void)
   T_on = (T_on_HB << 8) | (T_on_LB);
   T_on_double = 2 * T_on;
 
-  T0_Waitus(1);
+  T0_Waitus (1);
 
   switch (mode)
     {
@@ -202,8 +201,9 @@ main (void)
     case 3:
       mode_multichannel_scanning_loop ();
       break;
-    default :
-      while(1); // loop indefinitely if mode undefined
+    default:
+      while (1)
+        ; // loop indefinitely if mode undefined
     }
 }
 
@@ -233,21 +233,24 @@ mode_multichannel_scanning_nonloop (void)
   channel_nr = 0;
   MUX36S16_output (channel_nr); // initial setup of the channel
   channel_set = 1;
-  Write_Channel(channel_nr); // initial write of the channel
+  Write_Channel (channel_nr); // initial write of the channel
   TMR2CN0 |= TMR2CN0_TR2__RUN; // start timer 2 to generate the pulse frequency
   while (1)
     {
-      if ((!set_stim_off) && (!channel_set)) { // T_on_double elapsed
-          channel_nr ++; // as soon as T_on elapsed increment the channel
-          if (channel_nr >= 15) { // if channel reached the last one
+      if ((!set_stim_off) && (!channel_set))
+        { // T_on_double elapsed
+          channel_nr++; // as soon as T_on elapsed increment the channel
+          if (channel_nr >= 15)
+            { // if channel reached the last one
               TMR2CN0 &= ~(TMR2CN0_TR2__BMASK); // stop timer 2
               P05 = 0; // switch off periphery
-              while (1); // halt
-          }
+              while (1)
+                ; // halt
+            }
           MUX36S16_output (channel_nr); // set the new channel
           channel_set = 1;
-          Write_Channel(channel_nr);
-      }
+          Write_Channel (channel_nr);
+        }
     }
 }
 
@@ -323,13 +326,15 @@ T0_Waitus (uint16_t us)
   TMOD &= ~0x0f;                      // 16-bit free run mode
   TMOD |= 0x01;
 
-  CKCON0 |= 0x04;                      // Timer0 counts SYSCLKs
+  //CKCON0 |= 0x04;                      // Timer0 counts SYSCLKs
+  //CKCON0 |= 0x00; // Timer 0 uses prescale SCA clock
+  CKCON0 |= 0x01; // Timer 0 prescale value System Clock / 4
 
   while (us)
     {
       TCON_TR0 = 0;                         // Stop Timer0
-      TH0 = (0xFE << TH0_TH0__SHIFT); // 0xFD
-      TL0 = (0x0B << TL0_TL0__SHIFT); // 0xF2
+      TH0 = (0xFD << TH0_TH0__SHIFT); //
+      TL0 = (0x9B << TL0_TL0__SHIFT); //
       TCON_TF0 = 0;                         // Clear overflow indicator
       TCON_TR0 = 1;                         // Start Timer0
       while (!TCON_TF0)

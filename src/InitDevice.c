@@ -112,9 +112,11 @@ enter_DefaultMode_from_SMBus_reset (void)
   // Save the SFRPAGE
   uint8_t SFRPAGE_save = SFRPAGE;
   PCA_0_enter_DefaultMode_from_SMBus_reset ();
+  VREG_0_enter_DefaultMode_from_SMBus_reset ();
   PORTS_0_enter_DefaultMode_from_SMBus_reset ();
   PORTS_1_enter_DefaultMode_from_SMBus_reset ();
   PBCFG_0_enter_DefaultMode_from_SMBus_reset ();
+  HFOSC_0_enter_DefaultMode_from_SMBus_reset ();
   CLOCK_0_enter_DefaultMode_from_SMBus_reset ();
   TIMER16_2_enter_DefaultMode_from_SMBus_reset ();
   TIMER_SETUP_0_enter_DefaultMode_from_SMBus_reset ();
@@ -164,7 +166,6 @@ PORTS_0_enter_DefaultMode_from_SMBus_reset (void)
    - P0.6 output is open-drain
    - P0.7 output is open-drain
    ***********************************************************************/
-  SFRPAGE = 0x00;
   P0MDOUT = P0MDOUT_B0__OPEN_DRAIN | P0MDOUT_B1__OPEN_DRAIN
       | P0MDOUT_B2__PUSH_PULL | P0MDOUT_B3__PUSH_PULL | P0MDOUT_B4__PUSH_PULL
       | P0MDOUT_B5__PUSH_PULL | P0MDOUT_B6__OPEN_DRAIN | P0MDOUT_B7__OPEN_DRAIN;
@@ -298,9 +299,9 @@ CLOCK_0_enter_DefaultMode_from_SMBus_reset (void)
   // $[CLKSEL - Clock Select]
   /***********************************************************************
    - SYSCLK is equal to selected clock source divided by 2
-   - Clock derived from the Internal Low Power Oscillator
+   - Clock derived from the internal precision High-Frequency Oscillator
    ***********************************************************************/
-  CLKSEL = CLKSEL_CLKDIV__SYSCLK_DIV_2 | CLKSEL_CLKSL__LPOSC;
+  CLKSEL = CLKSEL_CLKDIV__SYSCLK_DIV_2 | CLKSEL_CLKSL__HFOSC;
   // Wait for the clock to be ready
   while ((CLKSEL & CLKSEL_CLKRDY__BMASK) != CLKSEL_CLKRDY__SET)
     ;
@@ -330,16 +331,16 @@ TIMER16_2_enter_DefaultMode_from_SMBus_reset (void)
 
   // $[TMR2RLH - Timer 2 Reload High Byte]
   /***********************************************************************
-   - Timer 2 Reload High Byte = 0x5D
+   - Timer 2 Reload High Byte = 0x38
    ***********************************************************************/
-  TMR2RLH = (0x5D << TMR2RLH_TMR2RLH__SHIFT);
+  TMR2RLH = (0x38 << TMR2RLH_TMR2RLH__SHIFT);
   // [TMR2RLH - Timer 2 Reload High Byte]$
 
   // $[TMR2RLL - Timer 2 Reload Low Byte]
   /***********************************************************************
-   - Timer 2 Reload Low Byte = 0x3D
+   - Timer 2 Reload Low Byte = 0x9E
    ***********************************************************************/
-  TMR2RLL = (0x3D << TMR2RLL_TMR2RLL__SHIFT);
+  TMR2RLL = (0x9E << TMR2RLL_TMR2RLL__SHIFT);
   // [TMR2RLL - Timer 2 Reload Low Byte]$
 
   // $[TMR2CN0]
@@ -508,6 +509,39 @@ PBCFG_0_enter_SMBus_reset_from_RESET (void)
 
   // $[XBR1 - Port I/O Crossbar 1]
   // [XBR1 - Port I/O Crossbar 1]$
+
+}
+
+extern void
+HFOSC_0_enter_DefaultMode_from_SMBus_reset (void)
+{
+  // $[HFO#CAL - High Frequency Oscillator Calibration]
+  // [HFO#CAL - High Frequency Oscillator Calibration]$
+
+  // $[HFO#CN - High Frequency Oscillator Control]
+  /***********************************************************************
+   - High Frequency Oscillator enabled
+   ***********************************************************************/
+  HFO0CN |= HFO0CN_IOSCEN__ENABLED;
+  // [HFO#CN - High Frequency Oscillator Control]$
+
+  // $[Oscillator Ready]
+  while ((HFO0CN & HFO0CN_IFRDY__BMASK) == HFO0CN_IFRDY__NOT_SET)
+    ;
+  // [Oscillator Ready]$
+
+}
+
+extern void
+VREG_0_enter_DefaultMode_from_SMBus_reset (void)
+{
+  // $[REG0CN - Voltage Regulator Control]
+  /***********************************************************************
+   - Enable the precision High Frequency Oscillator bias
+   ***********************************************************************/
+  SFRPAGE = 0x00;
+  REG0CN = REG0CN_OSCBIAS__ENABLED;
+  // [REG0CN - Voltage Regulator Control]$
 
 }
 

@@ -3,9 +3,12 @@
   <mode name="DefaultMode">
     <property object="CLOCK_0" propertyId="ABPeripheral.included" value="true"/>
     <property object="CLOCK_0" propertyId="clock.clockselect.clocksourcedivider" value="SYSCLK / 2"/>
-    <property object="CLOCK_0" propertyId="clock.clockselect.selectclocksource" value="Low-Power Oscillator"/>
+    <property object="CLOCK_0" propertyId="clock.clockselect.selectclocksource" value="High-Frequency Oscillator"/>
     <property object="CROSSBAR0" propertyId="xbar0.smbus0.clockdata" value="Enabled"/>
     <property object="DefaultMode" propertyId="mode.diagramLocation" value="100, 100"/>
+    <property object="HFOSC_0" propertyId="ABPeripheral.included" value="true"/>
+    <property object="HFOSC_0" propertyId="hfosc.highfrequencyoscillatorcontrol.enablehighfrequencyoscillator" value="Enabled"/>
+    <property object="HFOSC_0" propertyId="hfosc.highfrequencyoscillatorcontrol.highfrequencyoscillatorfrequency" value="24.5 MHz"/>
     <property object="INTERRUPT_0" propertyId="ABPeripheral.included" value="true"/>
     <property object="INTERRUPT_0" propertyId="interrupt.extendedinterruptenable1.enablesmbussmb0interrupt" value="Enabled"/>
     <property object="INTERRUPT_0" propertyId="interrupt.interruptenable.enableallinterrupts" value="Enabled"/>
@@ -62,9 +65,9 @@
     <property object="PCACH_2" propertyId="ABPeripheral.included" value="true"/>
     <property object="PCACH_2" propertyId="pcach.pcachannel.matchfunction" value="Enabled"/>
     <property object="PCA_0" propertyId="ABPeripheral.included" value="true"/>
-    <property object="PCA_0" propertyId="pca.pcacountertimerconfiguration.pcaclockfrequency" value="833.333 kHz"/>
-    <property object="PCA_0" propertyId="pca.pcacountertimerconfiguration.pcaclockfrequencyintegervalue" value="833333.333333"/>
-    <property object="PCA_0" propertyId="pca.pcacountertimerconfiguration.pcaclockperiod" value="1.200 us"/>
+    <property object="PCA_0" propertyId="pca.pcacountertimerconfiguration.pcaclockfrequency" value="1.021 MHz"/>
+    <property object="PCA_0" propertyId="pca.pcacountertimerconfiguration.pcaclockfrequencyintegervalue" value="1020833.33333"/>
+    <property object="PCA_0" propertyId="pca.pcacountertimerconfiguration.pcaclockperiod" value="979.592 ns"/>
     <property object="PCA_0" propertyId="pca.pcastartrun.pcacountertimerrunstatus" value="Stopped"/>
     <property object="PCA_0" propertyId="pca.watchdogcontrol.enablewatchdogtimer" value="Disabled"/>
     <property object="SMBUS_0" propertyId="ABPeripheral.included" value="true"/>
@@ -75,9 +78,9 @@
     <property object="TIMER01_0" propertyId="ABPeripheral.included" value="true"/>
     <property object="TIMER16_2" propertyId="ABPeripheral.included" value="true"/>
     <property object="TIMER16_2" propertyId="timer16.initandreloadvalue.targetoverflowfrequency" value="20"/>
-    <property object="TIMER16_2" propertyId="timer16.initandreloadvalue.timerreloadvalue" value="23869"/>
-    <property object="TIMER16_2" propertyId="timer16.reloadhighbyte.reloadhighbyte" value="93"/>
-    <property object="TIMER16_2" propertyId="timer16.reloadlowbyte.reloadlowbyte" value="61"/>
+    <property object="TIMER16_2" propertyId="timer16.initandreloadvalue.timerreloadvalue" value="14494"/>
+    <property object="TIMER16_2" propertyId="timer16.reloadhighbyte.reloadhighbyte" value="56"/>
+    <property object="TIMER16_2" propertyId="timer16.reloadlowbyte.reloadlowbyte" value="158"/>
     <property object="TIMER16_3" propertyId="ABPeripheral.included" value="true"/>
     <property object="TIMER_SETUP_0" propertyId="ABPeripheral.included" value="true"/>
     <property object="TIMER_SETUP_0" propertyId="timer_setup.clockcontrol.timer0clockselect" value="Use SYSCLK"/>
@@ -89,6 +92,8 @@
     <property object="TIMER_SETUP_0" propertyId="timer_setup.timer1.mode" value="Mode 2, 8-bit Counter/Timer with Auto-Reload"/>
     <property object="TIMER_SETUP_0" propertyId="timer_setup.timer1.timerrunningstate" value="Timer is Running"/>
     <property object="TIMER_SETUP_0" propertyId="timer_setup.timer1.timerswitch1:runcontrol" value="Start"/>
+    <property object="VREG_0" propertyId="ABPeripheral.included" value="true"/>
+    <property object="VREG_0" propertyId="vreg.voltageregulatorcontrol.highfrequencyoscillatorbias" value="Enabled"/>
   </mode>
   <mode name="SMBus_reset">
     <property object="PBCFG_0" propertyId="pbcfg.settings.enablecrossbar" value="Enabled"/>

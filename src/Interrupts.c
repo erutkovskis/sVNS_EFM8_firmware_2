@@ -24,6 +24,7 @@ extern uint16_t pulseCounter;
 extern uint16_t T_on;
 extern uint16_t T_on_double;
 extern bool On;
+extern uint16_t PW;
 extern volatile uint8_t set_stim_off = 0;
 extern volatile bool channel_set;
 
@@ -53,12 +54,12 @@ SI_INTERRUPT (TIMER2_ISR, TIMER2_IRQn)
         Polarity(0); // start shunted
         Polarity(1);// forward polarity
         Pulse_On();// pulse on
-        T0_Waitus(1);
+        T0_Waitus(PW);
         Pulse_Off();// pulse off
         Polarity(0);// shunt
         Polarity(2);// reverse
         Pulse_On();// pulse on
-        T0_Waitus(1);
+        T0_Waitus(PW);
         Pulse_Off();// pulse off
         Polarity(0);// shunted
         // next interrupt is the next pulse
