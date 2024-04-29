@@ -29,6 +29,8 @@ Pulse_Off (void);
 void
 T0_Waitus (uint16_t);
 void
+T2_Set (uint16_t);
+void
 SMB_Write (void);
 void
 SMB_Read (void);
@@ -44,6 +46,7 @@ void
 mode_multichannel_scanning_nonloop (void);
 void
 mode_multichannel_scanning_loop (void);
+void T2_set(uint16_t);
 
 //-----------------------------------------------------------------------------
 // Application-component specific constants and variables
@@ -188,6 +191,7 @@ main (void)
   T_on = (T_on_HB << 8) | (T_on_LB);
   T_on_double = 2 * T_on;
 
+  T2_set(T);
   T0_Waitus (1);
 
   switch (mode)
@@ -342,6 +346,48 @@ T0_Waitus (uint16_t us)
       us--;                            // Update us counter
     }
   TCON_TR0 = 0;                            // Stop Timer0
+}
+
+void
+T2_Set(uint16_t T) {
+  // $[Timer Initialization]
+    // Save Timer Configuration
+    uint8_t TMR2CN0_TR2_save;
+    TMR2CN0_TR2_save = TMR2CN0 & TMR2CN0_TR2__BMASK;
+    // Stop Timer
+    TMR2CN0 &= ~(TMR2CN0_TR2__BMASK);
+    // [Timer Initialization]$
+
+    // $[TMR2CN0 - Timer 2 Control]
+    // [TMR2CN0 - Timer 2 Control]$
+
+    // $[TMR2H - Timer 2 High Byte]
+    // [TMR2H - Timer 2 High Byte]$
+
+    // $[TMR2L - Timer 2 Low Byte]
+    // [TMR2L - Timer 2 Low Byte]$
+
+    // $[TMR2RLH - Timer 2 Reload High Byte]
+    /***********************************************************************
+     - Timer 2 Reload High Byte = 0x38
+     ***********************************************************************/
+    TMR2RLH = ( (T >> 8) << TMR2RLH_TMR2RLH__SHIFT);
+    // [TMR2RLH - Timer 2 Reload High Byte]$
+
+    // $[TMR2RLL - Timer 2 Reload Low Byte]
+    /***********************************************************************
+     - Timer 2 Reload Low Byte = 0x9E
+     ***********************************************************************/
+    TMR2RLL = ( (T & 0xFF) << TMR2RLL_TMR2RLL__SHIFT);
+    // [TMR2RLL - Timer 2 Reload Low Byte]$
+
+    // $[TMR2CN0]
+    // [TMR2CN0]$
+
+    // $[Timer Restoration]
+    // Restore Timer Configuration
+    TMR2CN0 |= TMR2CN0_TR2_save;
+    // [Timer Restoration]$
 }
 
 /* Function: SMB_Write
