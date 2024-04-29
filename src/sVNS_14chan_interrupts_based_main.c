@@ -244,8 +244,8 @@ mode_multichannel_scanning_nonloop (void)
       if ((!set_stim_off) && (!channel_set))
         { // T_on_double elapsed
           channel_nr++; // as soon as T_on elapsed increment the channel
-          if (channel_nr >= 15)
-            { // if channel reached the last one
+          if (channel_nr >= 14)
+            { // if channel reached the last one (not including Full Vagus)
               TMR2CN0 &= ~(TMR2CN0_TR2__BMASK); // stop timer 2
               P05 = 0; // switch off periphery
               while (1)
@@ -261,10 +261,26 @@ mode_multichannel_scanning_nonloop (void)
 void
 mode_multichannel_scanning_loop (void)
 {
-  while (1)
-    {
-
-    }
+  P05 = On;
+    channel_nr = 0;
+    MUX36S16_output (channel_nr); // initial setup of the channel
+    channel_set = 1;
+    Write_Channel (channel_nr); // initial write of the channel
+    TMR2CN0 |= TMR2CN0_TR2__RUN; // start timer 2 to generate the pulse frequency
+    while (1)
+      {
+        if ((!set_stim_off) && (!channel_set))
+          { // T_on_double elapsed
+            channel_nr++; // as soon as T_on elapsed increment the channel
+            if (channel_nr >= 14)  // not including Full Vagus
+              { // if channel reached the last one
+                channel_nr = 0; // loop the channels
+              }
+            MUX36S16_output (channel_nr); // set the new channel
+            channel_set = 1;
+            Write_Channel (channel_nr);
+          }
+      }
 }
 
 // Function definitions
