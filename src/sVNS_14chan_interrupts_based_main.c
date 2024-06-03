@@ -46,7 +46,6 @@ void
 mode_multichannel_scanning_nonloop (void);
 void
 mode_multichannel_scanning_loop (void);
-void T2_set(uint16_t);
 
 //-----------------------------------------------------------------------------
 // Application-component specific constants and variables
@@ -191,7 +190,7 @@ main (void)
   T_on = (T_on_HB << 8) | (T_on_LB);
   T_on_double = 2 * T_on;
 
-  T2_set(T);
+  T2_Set(T);
   T0_Waitus (1);
 
   switch (mode)
