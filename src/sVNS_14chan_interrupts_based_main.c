@@ -46,6 +46,7 @@ void
 mode_multichannel_scanning_nonloop (void);
 void
 mode_multichannel_scanning_loop (void);
+void WriteStimOffToNFC(void);
 
 //-----------------------------------------------------------------------------
 // Application-component specific constants and variables
@@ -74,6 +75,7 @@ uint8_t T_on_MB_LSB1;
 volatile bool channel_set = 0;
 bool telemetry_enabled = 0;
 volatile bool On;
+extern volatile bool StimOffNFCSentFlag;
 //
 //union { // solution proposed by Copilot AI - make a union from the 32-bit variable with four 8-bit variables
 //  unsigned long position;
@@ -240,6 +242,8 @@ mode_multichannel_scanning_nonloop (void)
   TMR2CN0 |= TMR2CN0_TR2__RUN; // start timer 2 to generate the pulse frequency
   while (1)
     {
+      WriteStimOffToNFC();
+
       if ((!set_stim_off) && (!channel_set))
         { // T_on_double elapsed
           channel_nr++; // as soon as T_on elapsed increment the channel
@@ -268,6 +272,8 @@ mode_multichannel_scanning_loop (void)
     TMR2CN0 |= TMR2CN0_TR2__RUN; // start timer 2 to generate the pulse frequency
     while (1)
       {
+        WriteStimOffToNFC();
+
         if ((!set_stim_off) && (!channel_set))
           { // T_on_double elapsed
             channel_nr++; // as soon as T_on elapsed increment the channel
@@ -403,6 +409,15 @@ T2_Set(uint16_t T) {
     // Restore Timer Configuration
     TMR2CN0 |= TMR2CN0_TR2_save;
     // [Timer Restoration]$
+}
+
+void
+WriteStimOffToNFC (void)
+{
+  if (!StimOffNFCSentFlag) {
+      StimOffNFCSentFlag = 1;
+      Write_Channel(100);
+  }
 }
 
 /* Function: SMB_Write

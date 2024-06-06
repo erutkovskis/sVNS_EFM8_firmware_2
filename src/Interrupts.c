@@ -27,6 +27,7 @@ extern bool On;
 extern uint16_t PW;
 extern volatile uint8_t set_stim_off = 0;
 extern volatile bool channel_set;
+volatile bool StimOffNFCSentFlag = 1;
 
 extern void
 T0_Waitus (uit16_t);
@@ -70,6 +71,7 @@ SI_INTERRUPT (TIMER2_ISR, TIMER2_IRQn)
         Polarity(0);// shunted
         set_stim_off = 1;
         P05 = 0;
+        StimOffNFCSentFlag = 0;
       }
     else if (pulseCounter > T_on_double)
       {
