@@ -30,7 +30,7 @@ extern volatile bool channel_set;
 volatile bool StimOffNFCSentFlag = 1;
 
 extern void
-T0_Waitus (uit16_t);
+T0_Waitus (uint16_t);
 extern void
 Polarity (uint8_t);
 extern void
