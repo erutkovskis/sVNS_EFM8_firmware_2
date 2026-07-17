@@ -416,7 +416,7 @@ WriteStimOffToNFC (void)
 {
   if (!StimOffNFCSentFlag) {
       StimOffNFCSentFlag = 1;
-      Write_Channel(100);
+      Write_Channel(channel_nr | 0x80); // high bit = stim off, lower 7 = channel
   }
 }
 

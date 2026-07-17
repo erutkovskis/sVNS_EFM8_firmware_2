@@ -15,10 +15,13 @@ SI_SBIT (P05, SFR_P0, 5);// Pin 0.5 for SHDN (20V stage) enable/disable
 // NT3H I2C parameters
 #define MEMA_read  0x01     // Memory address to read
 #define MEMA_write  0x02    // Memory address to write
-bool SA_sent = 0;
+volatile bool SA_sent = 0;
 bool SA_read_sent = 0;
-bool MEMA_sent = 0;
+volatile bool MEMA_sent = 0;
 bool Read_Init = 0;
+volatile uint8_t smbus_watchdog = 0;
+#define SMBUS_WATCHDOG_MAX  15    // 15 × T_period; tune to be > one I2C transaction
+                                  // but << T_on
 
 extern uint16_t pulseCounter;
 extern uint16_t T_on;
@@ -49,6 +52,23 @@ Pulse_Off (void);
 //-----------------------------------------------------------------------------
 SI_INTERRUPT (TIMER2_ISR, TIMER2_IRQn)
   {
+  // SMBus watchdog — prevents hang if NT3H NACKs indefinitely
+     if (SMB_BUSY) {
+         if (++smbus_watchdog >= SMBUS_WATCHDOG_MAX) {
+             SMB0CF     &= ~0x80;   // reset SMBus hardware
+             SMB0CF     |=  0x80;
+             SMB0CN0_STA = 0;
+             SMB0CN0_STO = 0;
+             SMB0CN0_ACK = 0;
+             SMB0CN0_SI  = 0;       // clear any pending interrupt
+             MEMA_sent   = 0;       // clean state for next transaction
+             SA_sent     = 0;
+             SMB_BUSY    = 0;       // ← unblocks Write_Channel()'s while(SMB_BUSY)
+             smbus_watchdog = 0;
+         }
+     } else {
+         smbus_watchdog = 0;        // reset counter whenever bus is free
+     }
     pulseCounter++;
     if (pulseCounter <= T_on)
       {
