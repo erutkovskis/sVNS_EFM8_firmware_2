@@ -235,7 +235,7 @@ void
 mode_multichannel_scanning_nonloop (void)
 {
   P05 = On;
-  channel_nr = 0;
+//  channel_nr = 0;
   MUX36S16_output (channel_nr); // initial setup of the channel
   channel_set = 1;
   Write_Channel (channel_nr); // initial write of the channel
@@ -265,7 +265,7 @@ void
 mode_multichannel_scanning_loop (void)
 {
   P05 = On;
-    channel_nr = 0;
+//    channel_nr = 0;
     MUX36S16_output (channel_nr); // initial setup of the channel
     channel_set = 1;
     Write_Channel (channel_nr); // initial write of the channel
