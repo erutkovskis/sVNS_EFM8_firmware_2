@@ -53,7 +53,7 @@ void WriteStimOffToNFC(void);
 // ADC stuff:
 void UseADC(void);
 uint16_t ADC0_convertSampleToMillivolts (uint16_t sample);
-void Write_mV(uint16_t*, uint8_t);
+void Write_mV(uint16_t*, uint8_t, uint8_t);
 
 //-----------------------------------------------------------------------------
 // Application-component specific constants and variables
@@ -239,7 +239,7 @@ mode_single_channel (void)
     }
   TMR2CN0 |= TMR2CN0_TR2__RUN; // start timer 2 to generate the pulse frequency
   UseADC();
-  Write_mV(ADCBuf, sample_cnt);
+  Write_mV(ADCBuf, sample_cnt, channel_nr);
   sample_cnt = 0;  // reset sample count
   while (1)
     {
@@ -438,10 +438,10 @@ WriteStimOffToNFC (void)
   if (!StimOffNFCSentFlag) {
       StimOffNFCSentFlag = 1;
       // 1. Process and write the sampled voltage for the channel that just stimulated
-      Write_mV(ADCBuf, sample_cnt);
+      Write_mV(ADCBuf, sample_cnt, channel_nr | 0x80);
       sample_cnt = 0; // Reset the sample count buffer for the next channel stim
       // 2. Tell the transmitter the device is now resting
-      Write_Channel(channel_nr | 0x80); // high bit = stim off, lower 7 = channel
+//      Write_Channel(channel_nr | 0x80); // high bit = stim off, lower 7 = channel
   }
 }
 
@@ -574,22 +574,23 @@ Write_Channel (uint8_t channel_to_write) // write channel
   SMB_DATA_OUT[0] = channel_to_write;
   TARGET = SLAVE_ADDR;
   SMB_Write ();                     // Initiate SMBus write
-  TCON |= TCON_TR1__STOP; // stop timer 1 to save energy <======= FIX THIS
+//  TCON &= ~TCON_TR1__BMASK; // stop the timer 1 to save energy
 }
 
-void Write_mV(uint16_t *buffer, uint8_t length) {
+void Write_mV(uint16_t *buffer, uint8_t length, uint8_t channel_to_write) {
     uint8_t mV_LB;
     uint8_t mV_HB;
     uint8_t i; // iterator for the ADCBuf
     uint16_t mV_mean = 0;
+    SMB_DATA_OUT[0] = channel_to_write;
 
     if (length == 0) {
+        TCON |= TCON_TR1__RUN;    // Start Timer 1 for SMBus clock
         SMB_DATA_OUT[1] = 0;
         SMB_DATA_OUT[2] = 0;
         TARGET = SLAVE_ADDR;
-        TCON |= TCON_TR1__RUN;    // Start Timer 1 for SMBus clock
         SMB_Write ();
-        TCON &= ~TCON_TR1__BMASK; // stop the timer 1 to save energy
+//        TCON &= ~TCON_TR1__BMASK; // stop the timer 1 to save energy
         return;
     }
 
@@ -607,12 +608,12 @@ void Write_mV(uint16_t *buffer, uint8_t length) {
     mV_LB = mV_mean & 0xFF; // get the low byte
     mV_HB = mV_mean >> 8; // get the high byte
     // SMB_DATA_OUT[0] is reserved for the stimulation channel number
+    TCON |= TCON_TR1__RUN;    // Start Timer 1 for SMBus clock
     SMB_DATA_OUT[1] = mV_LB;
     SMB_DATA_OUT[2] = mV_HB;
     TARGET = SLAVE_ADDR;
-    TCON |= TCON_TR1__RUN;    // Start Timer 1 for SMBus clock
     SMB_Write ();                     // Initiate SMBus write
-    TCON |= TCON_TR1__STOP; // stop timer 1 to save energy         <======= FIX THIS
+//    TCON &= ~TCON_TR1__BMASK; // stop the timer 1 to save energy
 }
 // $[Generated Run-time code]
 // [Generated Run-time code]$
