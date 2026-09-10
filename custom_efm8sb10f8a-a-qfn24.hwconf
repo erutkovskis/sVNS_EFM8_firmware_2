@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="ASCII"?>
 <device:XMLDevice xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:device="http://www.silabs.com/ss/hwconfig/document/device.ecore" name="EFM8SB10F8A-A-QFN24" partId="mcu.8051.efm8.sb1.efm8sb10f8a-a-qfn24" version="4.0.0" contextId="%DEFAULT%">
   <mode name="DefaultMode">
+    <property object="ADC_0" propertyId="ABPeripheral.included" value="true"/>
+    <property object="ADC_0" propertyId="adc.configuration.sarclockdivider" value="2"/>
+    <property object="ADC_0" propertyId="adc.configuration.sarclockdividerreal" value="1"/>
+    <property object="ADC_0" propertyId="adc.control.enableadc" value="Enabled"/>
+    <property object="ADC_0" propertyId="adc.control.timer3overflowfrequency" value="15.000 Hz"/>
+    <property object="ADC_0" propertyId="adc.multiplexerselection.positiveinputselection" value="ADC0.6 (P0.6)"/>
+    <property object="ADC_0" propertyId="adc.view.view" value="Advanced"/>
+    <property object="ADC_0" propertyId="adc.windowcompare.greaterthanhighbyte" value="0"/>
+    <property object="ADC_0" propertyId="adc.windowcompare.greaterthanlowbyte" value="0"/>
     <property object="CLOCK_0" propertyId="ABPeripheral.included" value="true"/>
     <property object="CLOCK_0" propertyId="clock.clockselect.clocksourcedivider" value="SYSCLK / 2"/>
     <property object="CLOCK_0" propertyId="clock.clockselect.selectclocksource" value="High-Frequency Oscillator"/>
@@ -10,6 +19,7 @@
     <property object="HFOSC_0" propertyId="hfosc.highfrequencyoscillatorcontrol.enablehighfrequencyoscillator" value="Enabled"/>
     <property object="HFOSC_0" propertyId="hfosc.highfrequencyoscillatorcontrol.highfrequencyoscillatorfrequency" value="24.5 MHz"/>
     <property object="INTERRUPT_0" propertyId="ABPeripheral.included" value="true"/>
+    <property object="INTERRUPT_0" propertyId="interrupt.extendedinterruptenable1.enableadc0conversioncompleteinterrupt" value="Enabled"/>
     <property object="INTERRUPT_0" propertyId="interrupt.extendedinterruptenable1.enablesmbussmb0interrupt" value="Enabled"/>
     <property object="INTERRUPT_0" propertyId="interrupt.interruptenable.enableallinterrupts" value="Enabled"/>
     <property object="INTERRUPT_0" propertyId="interrupt.interruptenable.enabletimer2interrupt" value="Enabled"/>

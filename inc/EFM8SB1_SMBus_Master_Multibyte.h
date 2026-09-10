@@ -42,11 +42,11 @@
 
 // Global holder for SMBus data
 // All receive data is written here
-extern uint8_t SMB_DATA_IN[NUM_BYTES_RD];
+extern xdata uint8_t SMB_DATA_IN[NUM_BYTES_RD];
 
 // Global holder for SMBus data.
 // All transmit data is read from here
-extern uint8_t SMB_DATA_OUT[NUM_BYTES_WR];
+extern xdata uint8_t SMB_DATA_OUT[NUM_BYTES_WR];
 
 
 extern uint8_t TARGET;                             // Target SMBus slave address

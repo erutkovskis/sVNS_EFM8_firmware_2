@@ -9,6 +9,7 @@
 // USER INCLUDES
 #include <SI_EFM8SB1_Register_Enums.h>
 #include "EFM8SB1_SMBus_Master_Multibyte.h"
+#include "adc_0.h"
 
 SI_SBIT (P05, SFR_P0, 5);// Pin 0.5 for SHDN (20V stage) enable/disable
 
@@ -22,7 +23,6 @@ bool Read_Init = 0;
 volatile uint8_t smbus_watchdog = 0;
 #define SMBUS_WATCHDOG_MAX  15    // 15 × T_period; tune to be > one I2C transaction
                                   // but << T_on
-
 extern uint16_t pulseCounter;
 extern uint16_t T_on;
 extern uint16_t T_on_double;
@@ -31,6 +31,7 @@ extern uint16_t PW;
 extern volatile uint8_t set_stim_off = 0;
 extern volatile bool channel_set;
 volatile bool StimOffNFCSentFlag = 1;
+volatile bool ADC_CONVERSION_COMPLETE = false;
 
 extern void
 T0_Waitus (uint16_t);
@@ -76,6 +77,10 @@ SI_INTERRUPT (TIMER2_ISR, TIMER2_IRQn)
         Polarity(1);// forward polarity
         Pulse_On();// pulse on
         T0_Waitus(PW);
+
+        ADC0CN0_ADBUSY = 1; // Sample the waveform after the pulse is established
+        while(ADC0CN0_ADBUSY); // Wait ~1.8us for conversion to finish before turning off
+
         Pulse_Off();// pulse off
         Polarity(0);// shunt
         Polarity(2);// reverse
@@ -251,16 +256,8 @@ SI_INTERRUPT (SMBUS0_ISR, SMBUS0_IRQn)
     SMB0CN0_SI = 0;                             // Clear interrupt flag
   }
 
-//-----------------------------------------------------------------------------
-// TIMER0_ISR
-//-----------------------------------------------------------------------------
-//
-// TIMER0 ISR Content goes here. Remember to clear flag bits:
-// TCON::TF0 (Timer 0 Overflow Flag)
-//
-//-----------------------------------------------------------------------------
-//SI_INTERRUPT (TIMER0_ISR, TIMER0_IRQn)
-//  {
-//
-//  }
-
+SI_INTERRUPT(ADC0EOC_ISR, ADC0EOC_IRQn)
+{
+  ADC0_clearIntFlags(ADC0_CONVERSION_COMPLETE_IF);
+  ADC_CONVERSION_COMPLETE = true;
+}

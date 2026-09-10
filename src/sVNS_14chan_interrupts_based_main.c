@@ -11,7 +11,10 @@
 //-----------------------------------------------------------------------------
 #include <SI_EFM8SB1_Register_Enums.h>                  // SFR declarations
 #include "InitDevice.h"
+#include "adc_0.h" // include ADC driver
 #include "EFM8SB1_SMBus_Master_Multibyte.h"
+#define VREF_MV         (3300UL)
+#define ADC_MAX_RESULT  ((1 << 10)-1) // 10 bit ADC
 // $[Generated Includes]
 // [Generated Includes]$
 
@@ -47,6 +50,10 @@ mode_multichannel_scanning_nonloop (void);
 void
 mode_multichannel_scanning_loop (void);
 void WriteStimOffToNFC(void);
+// ADC stuff:
+void UseADC(void);
+uint16_t ADC0_convertSampleToMillivolts (uint16_t sample);
+void Write_mV(uint16_t*, uint8_t);
 
 //-----------------------------------------------------------------------------
 // Application-component specific constants and variables
@@ -76,6 +83,7 @@ volatile bool channel_set = 0;
 bool telemetry_enabled = 0;
 volatile bool On;
 extern volatile bool StimOffNFCSentFlag;
+extern volatile bool ADC_CONVERSION_COMPLETE; // ADC measurement complete flag
 //
 //union { // solution proposed by Copilot AI - make a union from the 32-bit variable with four 8-bit variables
 //  unsigned long position;
@@ -95,11 +103,9 @@ extern volatile bool StimOffNFCSentFlag;
 // P0.0 - SMBus SDA
 // P0.1 - SMBus SCL
 uint8_t j;                                  // Counter variable
-uint8_t SMB_DATA_OUT[NUM_BYTES_WR] =
-  { 0 };   // Initialize I2C Write buffer, fill with 0
-uint8_t SMB_DATA_IN[NUM_BYTES_RD] =
-  { 0 };    // Initialize I2C Read buffer, fill with 0
-uint8_t SAVE[16];                           // Saved Read array
+xdata uint8_t SMB_DATA_OUT[NUM_BYTES_WR];   // Initialize I2C Write buffer
+xdata uint8_t SMB_DATA_IN[NUM_BYTES_RD];    // Initialize I2C Read buffer
+xdata uint8_t SAVE[16];                           // Saved Read array
 uint8_t TARGET;                             // Target SMBus slave address
 //define TARGET SLAVE_ADDR
 volatile bool SMB_BUSY;                     // SMB status bit
@@ -123,6 +129,12 @@ SI_SBIT (P02, SFR_P0, 2);// Pin 0.2 for MUX36D08 A0
 SI_SBIT (P03, SFR_P0, 3);// Pin 0.3 for MUX36D08 A1
 SI_SBIT (P04, SFR_P0, 4);// Pin 0.4 for MUX36D08 A2
 uint8_t mux36d08_state;                     // MUX36D08 state byte
+
+// ADC - pin 0.6, pre-programmed in hwconf
+#define adc_buf_size 10 // based on 20 Hz stimulation and shortest available stimulation time of 0.5 seconds
+xdata uint16_t ADCBuf[adc_buf_size]; // define ADC buffer
+uint8_t sample_cnt = 0; // will operate on just last 10 stimulations, therefore uint8_t
+
 //-----------------------------------------------------------------------------
 // SiLabs_Startup() Routine
 // ----------------------------------------------------------------------------
@@ -134,6 +146,7 @@ uint8_t mux36d08_state;                     // MUX36D08 state byte
 void
 SiLabs_Startup (void)
 {
+  PCA0MD &= ~PCA0MD_WDTE__BMASK; // Disable the Watchdog Timer because of xdata arrays
 // $[SiLabs Startup]
 // [SiLabs Startup]$
 }
@@ -225,9 +238,13 @@ mode_single_channel (void)
       Write_Channel (channel_nr); // write the set channel number to NT3H
     }
   TMR2CN0 |= TMR2CN0_TR2__RUN; // start timer 2 to generate the pulse frequency
+  UseADC();
+  Write_mV(ADCBuf, sample_cnt);
+  sample_cnt = 0;  // reset sample count
   while (1)
     {
       // nothing is needed here
+
     }
 }
 
@@ -243,6 +260,8 @@ mode_multichannel_scanning_nonloop (void)
   while (1)
     {
       WriteStimOffToNFC();
+
+      UseADC();
 
       if ((!set_stim_off) && (!channel_set))
         { // T_on_double elapsed
@@ -273,6 +292,8 @@ mode_multichannel_scanning_loop (void)
     while (1)
       {
         WriteStimOffToNFC();
+
+        UseADC();
 
         if ((!set_stim_off) && (!channel_set))
           { // T_on_double elapsed
@@ -416,6 +437,10 @@ WriteStimOffToNFC (void)
 {
   if (!StimOffNFCSentFlag) {
       StimOffNFCSentFlag = 1;
+      // 1. Process and write the sampled voltage for the channel that just stimulated
+      Write_mV(ADCBuf, sample_cnt);
+      sample_cnt = 0; // Reset the sample count buffer for the next channel stim
+      // 2. Tell the transmitter the device is now resting
       Write_Channel(channel_nr | 0x80); // high bit = stim off, lower 7 = channel
   }
 }
@@ -542,13 +567,52 @@ MUX36D08_output (uint8_t mux36d08_state)
  * (Address 8 on the NFC Tools GUI)
  */
 void
-Write_Channel (uint8_t channel_to_write)
+Write_Channel (uint8_t channel_to_write) // write channel
 {
+
   TCON |= TCON_TR1__RUN; // start timer 1 for SMBus clock
   SMB_DATA_OUT[0] = channel_to_write;
   TARGET = SLAVE_ADDR;
   SMB_Write ();                     // Initiate SMBus write
-  TCON |= TCON_TR1__STOP; // stop timer 1 to save energy
+  TCON |= TCON_TR1__STOP; // stop timer 1 to save energy <======= FIX THIS
+}
+
+void Write_mV(uint16_t *buffer, uint8_t length) {
+    uint8_t mV_LB;
+    uint8_t mV_HB;
+    uint8_t i; // iterator for the ADCBuf
+    uint16_t mV_mean = 0;
+
+    if (length == 0) {
+        SMB_DATA_OUT[1] = 0;
+        SMB_DATA_OUT[2] = 0;
+        TARGET = SLAVE_ADDR;
+        TCON |= TCON_TR1__RUN;    // Start Timer 1 for SMBus clock
+        SMB_Write ();
+        TCON &= ~TCON_TR1__BMASK; // stop the timer 1 to save energy
+        return;
+    }
+
+    // Stop ADC interrupts:
+    EIE1 &= ~(EIE1_EADC0__BMASK); // disable ADC interrupt - AND with the inverse ADC interrupts mask
+    // Accumulate sampled ADC values:
+    for (i = 0; i < length; i++) {
+        mV_mean = mV_mean + buffer[i];
+    }
+    mV_mean = mV_mean / length; // don't care about the decimal of floating precision - just an estimate of voltage on the interface
+
+    // Re-enable ADC interrupts:
+    EIE1 |= EIE1_EADC0__BMASK; // endable ADC interrupt - OR with the ADC interrupts mask
+
+    mV_LB = mV_mean & 0xFF; // get the low byte
+    mV_HB = mV_mean >> 8; // get the high byte
+    // SMB_DATA_OUT[0] is reserved for the stimulation channel number
+    SMB_DATA_OUT[1] = mV_LB;
+    SMB_DATA_OUT[2] = mV_HB;
+    TARGET = SLAVE_ADDR;
+    TCON |= TCON_TR1__RUN;    // Start Timer 1 for SMBus clock
+    SMB_Write ();                     // Initiate SMBus write
+    TCON |= TCON_TR1__STOP; // stop timer 1 to save energy         <======= FIX THIS
 }
 // $[Generated Run-time code]
 // [Generated Run-time code]$
@@ -570,4 +634,28 @@ SDA_Reset (void)
   for (j = 0; j < 10; j++)
     ;         // Hold the clock high
   XBR1 = 0x00;                     // Disable Crossbar
+}
+
+// -----------------------------------------------------------------------------
+// UseADC Function
+// -----------------------------------------------------------------------------
+void UseADC(void)
+{
+    uint16_t mV;
+
+    if (ADC_CONVERSION_COMPLETE)
+    {
+       ADC_CONVERSION_COMPLETE = false;
+       mV = ADC0_convertSampleToMillivolts(ADC0_getResult());
+       // sample_cnt is zeroed after each write, so
+       if (sample_cnt < adc_buf_size) {
+           ADCBuf[sample_cnt] = mV;
+           sample_cnt ++;
+       }
+    }
+}
+
+uint16_t ADC0_convertSampleToMillivolts(uint16_t sample)
+{
+  return ((uint32_t)sample * VREF_MV) / ADC_MAX_RESULT;
 }

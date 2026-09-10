@@ -44,6 +44,8 @@ TIMER16_2_enter_DefaultMode_from_SMBus_reset (void);
 extern void
 TIMER_SETUP_0_enter_DefaultMode_from_SMBus_reset (void);
 extern void
+ADC_0_enter_DefaultMode_from_SMBus_reset (void);
+extern void
 IREF_0_enter_DefaultMode_from_SMBus_reset (void);
 extern void
 SMBUS_0_enter_DefaultMode_from_SMBus_reset (void);
