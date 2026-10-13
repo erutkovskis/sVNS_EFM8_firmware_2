@@ -135,6 +135,17 @@ uint8_t mux36d08_state;                     // MUX36D08 state byte
 xdata uint16_t ADCBuf[adc_buf_size]; // define ADC buffer
 uint8_t sample_cnt = 0; // will operate on just last 10 stimulations, therefore uint8_t
 
+// Final State Machine definitions
+typedef enum {
+    STATE_IDLE,
+    STATE_RUN_SINGLE,
+    STATE_RUN_SWEEP_ONCE,
+    STATE_RUN_SWEEP_LOOP
+} SystemState_t;
+
+SystemState_t current_state = STATE_IDLE; // Start in IDLE mode
+
+
 //-----------------------------------------------------------------------------
 // SiLabs_Startup() Routine
 // ----------------------------------------------------------------------------
@@ -166,63 +177,34 @@ main (void)
     }
   enter_DefaultMode_from_SMBus_reset (); // initialize normal operation
 
-  //
-  // Read data-stimulation parameters from NT3H via I2C
-  TARGET = SLAVE_ADDR;         // NT3H slave address, 0xAA for NT3H
-  SMB_Read ();      // Read first 16 bytes from the memory 0x01 into READ buffer
-  for (j = 0; j < 16; j++)
-    {
-      SAVE[j] = SMB_DATA_IN[j];   // Save read buffer into array
-    }
-
-  TCON |= TCON_TR1__STOP; // stop SMBus timer 1 to save energy
-
-  PW_HB = SAVE[0]; // Pulse Width in chunks of 50 us high byte
-  PW_LB = SAVE[1]; // Pulse Width in chunks of 50 us low byte
-  T_HB = SAVE[2]; // Period high byte
-  T_LB = SAVE[3]; // Period frequency low byte
-  T_on_HB = SAVE[4]; // Pulse train period and channel switching time, separated into 8bit chunks
-  T_on_LB = SAVE[5];
-//  T_on_HB = 0x00;
-//  T_on_LB = 0x64;
-
-  On = SAVE[6];
-
-  Iset = SAVE[7]; // IREF current value, remember 0x3F is maximum, 0.5 mA reference current
-  mode = SAVE[8]; // Stimulation mode. 1 for singlechannel stimulation, 2 for multichannel scan (once), 3 for for multichannel scan (loop)
-  channel_nr = SAVE[9];
-  telemetry_enabled = SAVE[10];
-
-//  On = 1;
-//  Iset = 0x3F;
-//  mode = 1;
-//  channel_nr = 0;
-//  telemetry_enabled = 1;
-  // Set the device according to read values
-  P05 = On;         // Enable or disable LT8410, enable MUX36D08 and 2x MUX36S16
-  PW = (PW_HB << 8) | (PW_LB); // Combine PW into single hex
-  T = (T_HB << 8) | (T_LB); // Combine pulse period into single hex
-  T_on = (T_on_HB << 8) | (T_on_LB);
-  T_on_double = 2 * T_on;
-
-  T2_Set(T);
+  ReadAndApplyNFCParameters();
   T0_Waitus (1);
 
-  switch (mode)
+  while(1) {
+    switch (current_state)
     {
-    case 1:
-      mode_single_channel ();
-      break;
-    case 2:
-      mode_multichannel_scanning_nonloop ();
-      break;
-    case 3:
-      mode_multichannel_scanning_loop ();
-      break;
-    default:
-      while (1)
-        ; // loop indefinitely if mode undefined
+      case STATE_IDLE:
+        P05 = 0; // Ensure 20V boost converter is OFF
+        TMR2CN0 &= ~(TMR2CN0_TR2__BMASK); // Ensure Timer 2 is STOPPED
+        ReadAndApplyNFCParameters(); // Poll the NFC tag for new parameters
+        if (current_state == STATE_IDLE) {
+            T0_Waitus(10000); // 10,000 chunks of 50us = 500 ms pause
+        }
+        break;
+      case STATE_RUN_SINGLE:
+        mode_single_channel();
+        break;
+      case STATE_RUN_SWEEP_ONCE:
+        mode_multichannel_scanning_nonloop();
+        break;
+      case STATE_RUN_SWEEP_LOOP:
+        mode_multichannel_scanning_loop();
+        break;
+      default:
+        current_state = STATE_IDLE; // Failsafe recovery
+        break;
     }
+  }
 }
 
 //----------------------------------
@@ -251,33 +233,37 @@ mode_single_channel (void)
 void
 mode_multichannel_scanning_nonloop (void)
 {
-  P05 = On;
-//  channel_nr = 0;
-  MUX36S16_output (channel_nr); // initial setup of the channel
-  channel_set = 1;
-  Write_Channel (channel_nr); // initial write of the channel
-  TMR2CN0 |= TMR2CN0_TR2__RUN; // start timer 2 to generate the pulse frequency
-  while (1)
-    {
-      WriteStimOffToNFC();
+  if (P05 == 0) {
+    P05 = On;
+  //  channel_nr = 0;
+    // Reset global state variables in case of a mid-sweep abort
+    pulseCounter = 0;
+    set_stim_off = 0;
+    StimOffNFCSentFlag = 1;
+    sample_cnt = 0;
 
-      UseADC();
+    MUX36S16_output (channel_nr); // initial setup of the channel
+    channel_set = 1;
+    Write_Channel (channel_nr); // initial write of the channel
+    TMR2CN0 |= TMR2CN0_TR2__RUN; // start timer 2 to generate the pulse frequency
+  }
+    WriteStimOffToNFC();
+    UseADC();
 
-      if ((!set_stim_off) && (!channel_set))
-        { // T_on_double elapsed
-          channel_nr++; // as soon as T_on elapsed increment the channel
-          if (channel_nr >= 14)
-            { // if channel reached the last one (not including Full Vagus)
-              TMR2CN0 &= ~(TMR2CN0_TR2__BMASK); // stop timer 2
-              P05 = 0; // switch off periphery
-              while (1)
-                ; // halt
-            }
-          MUX36S16_output (channel_nr); // set the new channel
-          channel_set = 1;
-          Write_Channel (channel_nr);
-        }
-    }
+    if ((!set_stim_off) && (!channel_set))
+      { // T_on_double elapsed
+        channel_nr++; // as soon as T_on elapsed increment the channel
+        if (channel_nr >= 14)
+          { // if channel reached the last one (not including Full Vagus)
+            TMR2CN0 &= ~(TMR2CN0_TR2__BMASK); // stop timer 2
+            P05 = 0; // switch off periphery
+            current_state = STATE_IDLE;
+            return;
+          }
+        MUX36S16_output (channel_nr); // set the new channel
+        channel_set = 1;
+        Write_Channel (channel_nr);
+      }
 }
 
 void
@@ -480,6 +466,42 @@ SMB_Read (void)
 
   while (SMB_BUSY)
     ;               // Wait for transfer to complete
+}
+
+void ReadAndApplyNFCParameters(void) {
+  // 1. Start Timer 1 for SMBus clock (TR1 is bit 6)
+  TCON |= 0x40;
+  // 2. Read the first 16 bytes from NFC memory
+  TARGET = SLAVE_ADDR;
+  SMB_Read();
+  // 3. Stop Timer 1 to save energy
+  TCON &= ~0x40;
+  // 4. Update all global parameters directly from the read buffer
+  PW_HB = SMB_DATA_IN[0];
+  PW_LB = SMB_DATA_IN[1];
+  T_HB = SMB_DATA_IN[2];
+  T_LB = SMB_DATA_IN[3];
+  T_on_HB = SMB_DATA_IN[4];
+  T_on_LB = SMB_DATA_IN[5];
+  On = SMB_DATA_IN[6];
+  Iset = SMB_DATA_IN[7];
+  mode = SMB_DATA_IN[8];
+  channel_nr = SMB_DATA_IN[9];
+  telemetry_enabled = SMB_DATA_IN[10];
+  // 5. Reconstruct 16-bit parameters
+  PW = (PW_HB << 8) | (PW_LB);
+  T = (T_HB << 8) | (T_LB);
+  T_on = (T_on_HB << 8) | (T_on_LB);
+  T_on_double = 2 * T_on;
+  // 6. Transition state based on the 'On' byte
+  if (On) {
+    T2_Set(T); // Apply the new frequency timer
+    if (mode == 1) current_state = STATE_RUN_SINGLE;
+    else if (mode == 2) current_state = STATE_RUN_SWEEP_ONCE;
+    else if (mode == 3) current_state = STATE_RUN_SWEEP_LOOP;
+  } else {
+    current_state = STATE_IDLE;
+  }
 }
 
 /*
