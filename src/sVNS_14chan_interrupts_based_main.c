@@ -50,6 +50,7 @@ mode_multichannel_scanning_nonloop (void);
 void
 mode_multichannel_scanning_loop (void);
 void WriteStimOffToNFC(void);
+void ReadAndApplyNFCParameters(void);
 // ADC stuff:
 void UseADC(void);
 uint16_t ADC0_convertSampleToMillivolts (uint16_t sample);
