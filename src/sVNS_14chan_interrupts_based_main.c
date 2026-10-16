@@ -145,6 +145,7 @@ typedef enum {
 } SystemState_t;
 
 SystemState_t current_state = STATE_IDLE; // Start in IDLE mode
+bool state_initialized = 0;               // Tracks one-time setup per mode
 
 
 //-----------------------------------------------------------------------------
@@ -187,10 +188,7 @@ main (void)
       case STATE_IDLE:
         P05 = 0; // Ensure 20V boost converter is OFF
         TMR2CN0 &= ~(TMR2CN0_TR2__BMASK); // Ensure Timer 2 is STOPPED
-        ReadAndApplyNFCParameters(); // Poll the NFC tag for new parameters
-        if (current_state == STATE_IDLE) {
-            T0_Waitus(10000); // 10,000 chunks of 50us = 500 ms pause
-        }
+        state_initialized = 0;
         break;
       case STATE_RUN_SINGLE:
         mode_single_channel();
@@ -214,27 +212,44 @@ main (void)
 void
 mode_single_channel (void)
 {
-  P05 = On;
-  MUX36S16_output (channel_nr); // initial setup of the channel
+  if (!state_initialized) {
+    state_initialized = 1;
+    P05 = On;
+    pulseCounter = 0;
+    set_stim_off = 0;
+    StimOffNFCSentFlag = 1;
+    sample_cnt = 0;
+
+    MUX36S16_output (channel_nr); // initial setup of the channel
+    channel_set = 1;
+    if (telemetry_enabled)
+      {
+        Write_Channel (channel_nr); // write the set channel number to NT3H
+      }
+    TMR2CN0 |= TMR2CN0_TR2__RUN; // start timer 2 to generate the pulse frequency
+  }
+
   if (telemetry_enabled)
     {
-      Write_Channel (channel_nr); // write the set channel number to NT3H
+      WriteStimOffToNFC();
+      UseADC();
     }
-  TMR2CN0 |= TMR2CN0_TR2__RUN; // start timer 2 to generate the pulse frequency
-  UseADC();
-  Write_mV(ADCBuf, sample_cnt, channel_nr);
-  sample_cnt = 0;  // reset sample count
-  while (1)
-    {
-      // nothing is needed here
 
+  if ((!set_stim_off) && (!channel_set))
+    { // T_on_double elapsed — start next burst on the same channel
+      channel_set = 1;
+      if (telemetry_enabled)
+        {
+          Write_Channel (channel_nr);
+        }
     }
 }
 
 void
 mode_multichannel_scanning_nonloop (void)
 {
-  if (P05 == 0) {
+  if (!state_initialized) {
+    state_initialized = 1;
     P05 = On;
   //  channel_nr = 0;
     // Reset global state variables in case of a mid-sweep abort
@@ -258,6 +273,7 @@ mode_multichannel_scanning_nonloop (void)
           { // if channel reached the last one (not including Full Vagus)
             TMR2CN0 &= ~(TMR2CN0_TR2__BMASK); // stop timer 2
             P05 = 0; // switch off periphery
+            state_initialized = 0;
             current_state = STATE_IDLE;
             return;
           }
@@ -270,32 +286,35 @@ mode_multichannel_scanning_nonloop (void)
 void
 mode_multichannel_scanning_loop (void)
 {
-  P05 = On;
-//    channel_nr = 0;
+  if (!state_initialized) {
+    state_initialized = 1;
+    P05 = On;
+    pulseCounter = 0;
+    set_stim_off = 0;
+    StimOffNFCSentFlag = 1;
+    sample_cnt = 0;
+
     MUX36S16_output (channel_nr); // initial setup of the channel
     channel_set = 1;
     Write_Channel (channel_nr); // initial write of the channel
     TMR2CN0 |= TMR2CN0_TR2__RUN; // start timer 2 to generate the pulse frequency
-    while (1)
-      {
-        WriteStimOffToNFC();
+  }
 
-        UseADC();
+  WriteStimOffToNFC();
+  UseADC();
 
-        if ((!set_stim_off) && (!channel_set))
-          { // T_on_double elapsed
-            channel_nr++; // as soon as T_on elapsed increment the channel
-            if (channel_nr >= 14)  // not including Full Vagus
-              { // if channel reached the last one
-                channel_nr = 0; // loop the channels
-              }
-            MUX36S16_output (channel_nr); // set the new channel
-            channel_set = 1;
-            Write_Channel (channel_nr);
-          }
-      }
+  if ((!set_stim_off) && (!channel_set))
+    { // T_on_double elapsed
+      channel_nr++; // as soon as T_on elapsed increment the channel
+      if (channel_nr >= 14) // not including Full Vagus
+        { // if channel reached the last one
+          channel_nr = 0; // loop the channels
+        }
+      MUX36S16_output (channel_nr); // set the new channel
+      channel_set = 1;
+      Write_Channel (channel_nr);
+    }
 }
-
 // Function definitions
 
 /*
@@ -476,7 +495,7 @@ void ReadAndApplyNFCParameters(void) {
   TARGET = SLAVE_ADDR;
   SMB_Read();
   // 3. Stop Timer 1 to save energy
-  TCON &= ~0x40;
+//  TCON &= ~0x40;
   // 4. Update all global parameters directly from the read buffer
   PW_HB = SMB_DATA_IN[0];
   PW_LB = SMB_DATA_IN[1];
@@ -495,6 +514,7 @@ void ReadAndApplyNFCParameters(void) {
   T_on = (T_on_HB << 8) | (T_on_LB);
   T_on_double = 2 * T_on;
   // 6. Transition state based on the 'On' byte
+  P05 = On;
   if (On) {
     T2_Set(T); // Apply the new frequency timer
     if (mode == 1) current_state = STATE_RUN_SINGLE;

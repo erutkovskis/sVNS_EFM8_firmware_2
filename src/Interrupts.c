@@ -196,6 +196,9 @@ SI_INTERRUPT (SMBUS0_ISR, SMBUS0_IRQn)
               {
                 SMB0CN0_STO = 1;                // Send STOP condition, followed
                 SMB0CN0_STA = 1;// By a START
+                MEMA_sent = 0;  // Reset memory address flag for clean retry
+                SA_sent = 0;
+                Read_Init = 0;
                 NUM_ERRORS++;// Indicate error. Useful for debugging if SMBus is stuck.
               }
             break;
@@ -246,6 +249,10 @@ SI_INTERRUPT (SMBUS0_ISR, SMBUS0_IRQn)
         SMB0CN0_STA = 0;
         SMB0CN0_STO = 0;
         SMB0CN0_ACK = 0;
+        MEMA_sent = 0;
+        SA_sent = 0;
+        Read_Init = 0;
+        SA_read_sent = 0;
 
         SMB_BUSY = 0;// Free SMBus
 
