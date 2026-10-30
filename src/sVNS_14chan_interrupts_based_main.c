@@ -558,16 +558,8 @@ void
 MUX36S16_output (uint8_t mux36s16_state)
 {
   /*
-   * Because channel 14 for the output MUX36S16 is skipped,
-   * channel numbers are shifted by one for the channel 14 (decimal code 13, hex D) and 15
-   * (decimal code 14, hex E). Calibrate that such that user can input standard channels
-   * according to the channel cuff enumeration.
    */
 
-  if (mux36s16_state >= 13)
-    {
-      mux36s16_state = mux36s16_state + 1;
-    }
   P17 = (mux36s16_state & (1 << (1 - 1))) ? 1 : 0; // Get 1st bit of MUX36S16 state byte
   P16 = (mux36s16_state & (1 << (2 - 1))) ? 1 : 0; // Get 2nd bit of the state byte
   P15 = (mux36s16_state & (1 << (3 - 1))) ? 1 : 0; // Get 3rd bit of the state byte
